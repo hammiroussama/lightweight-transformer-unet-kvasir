@@ -46,15 +46,18 @@ def write_macros(metrics_by_name: dict[str, dict]) -> None:
         best = metrics_by_name[best_name]
         unet = metrics_by_name.get("U-Net")
         gain = best["dice_mean"] - unet["dice_mean"] if unet else 0.0
+        hardware_name = str(best.get("gpu_name", "TBD")).replace("_", r"\_")
+        torch_version = str(best.get("torch_version", "TBD")).replace("_", r"\_")
+        cuda_version = str(best.get("cuda_version", "TBD")).replace("_", r"\_")
         lines.extend(
             [
                 f"\\newcommand{{\\BestModelName}}{{{best_name}}}",
                 f"\\newcommand{{\\BestDice}}{{{fmt(best['dice_mean'])}}}",
                 f"\\newcommand{{\\BestIoU}}{{{fmt(best['iou_mean'])}}}",
                 f"\\newcommand{{\\DiceGain}}{{{fmt(gain)}}}",
-                f"\\newcommand{{\\HardwareName}}{{{best.get('gpu_name', 'TBD').replace('_', '\\_')}}}",
-                f"\\newcommand{{\\TorchVersion}}{{{str(best.get('torch_version', 'TBD')).replace('_', '\\_')}}}",
-                f"\\newcommand{{\\CudaVersion}}{{{str(best.get('cuda_version', 'TBD')).replace('_', '\\_')}}}",
+                f"\\newcommand{{\\HardwareName}}{{{hardware_name}}}",
+                f"\\newcommand{{\\TorchVersion}}{{{torch_version}}}",
+                f"\\newcommand{{\\CudaVersion}}{{{cuda_version}}}",
             ]
         )
     else:
@@ -113,7 +116,7 @@ def generate_qualitative(device: torch.device, sample_count: int, output_path: P
     worst = proposed_metrics.head(max(sample_count // 2, 1))["name"].tolist()
     best = proposed_metrics.tail(sample_count - len(worst))["name"].tolist()
     selected_names = worst + best
-    index_by_name = {item["name"]: i for i, item in enumerate(dataset.items)}
+    index_by_name = {Path(item["image"]).name: i for i, item in enumerate(dataset.items)}
     samples = [dataset[index_by_name[name]] for name in selected_names if name in index_by_name]
     if not samples:
         return
