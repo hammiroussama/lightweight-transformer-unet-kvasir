@@ -1,0 +1,16 @@
+FINAL OVERLEAF INSTRUCTIONS
+
+1. In Overleaf, choose New Project -> Upload Project.
+2. Upload the complete ZIP file without changing its internal folder structure.
+3. Set templateArxiv.tex as the Main document.
+4. Select pdfLaTeX as the compiler.
+5. Choose Recompile from scratch so BibTeX and cross-references resolve.
+6. Confirm that all four figures are visible and no citation is shown as [?].
+7. Download the PDF from Overleaf.
+
+Author: Oussama Hammir
+Email: hammiroussama@gmail.com
+Supervisor: Luyao
+GitHub: https://github.com/hammiroussama/lightweight-transformer-unet-kvasir
+
+Student ID: 25sf51073
