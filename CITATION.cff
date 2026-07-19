@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "Please cite this software and the accompanying course paper if you use it."
+title: "Lightweight Transformer-Enhanced Attention U-Net for Kvasir-SEG"
+type: software
+authors:
+  - family-names: "Hm"
+    given-names: "Oussama"
+year: 2026
+repository-code: "https://github.com/hammiroussama/lightweight-transformer-unet-kvasir"
+license: MIT

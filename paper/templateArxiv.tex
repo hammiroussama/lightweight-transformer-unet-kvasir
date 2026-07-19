@@ -1,0 +1,348 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage{PRIMEarxiv}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage{tikz}
+\usepackage{float}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+
+\geometry{a4paper}
+\AtBeginDocument{\newgeometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm,headheight=14pt,headsep=18pt,footskip=25pt}}
+\onehalfspacing
+\emergencystretch=1.5em
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textit{Lightweight Transformer-Enhanced Attention U-Net}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\input{results_macros.tex}
+
+\tikzset{
+  block/.style={draw,rounded corners,thick,align=center,minimum height=8mm,text width=20mm,fill=blue!8},
+  enc/.style={block,fill=green!10},
+  dec/.style={block,fill=orange!12},
+  att/.style={draw,rounded corners,thick,align=center,minimum height=7mm,text width=16mm,fill=yellow!18},
+  trans/.style={draw,rounded corners,very thick,align=center,minimum height=10mm,text width=30mm,fill=violet!12},
+  flow/.style={-{Latex[length=2mm]},thick},
+  skip/.style={-{Latex[length=2mm]},thick,dashed}
+}
+
+\title{A Lightweight Transformer-Enhanced Attention U-Net for Polyp Segmentation:\\
+A Controlled Experimental Study on Kvasir-SEG}
+
+\author{
+Oussama Hm \\
+School of Computer Science and Technology \\
+Harbin Institute of Technology, Shenzhen, China \\
+Advanced Artificial Intelligence Course Lab \\
+\texttt{your-email@example.com} \\
+Supervisor: [Supervisor Name]
+}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+Accurate polyp segmentation can support computer-aided colonoscopy by delineating suspicious tissue at pixel level, but the appearance, scale, illumination, and boundary contrast of polyps vary substantially. This paper presents a controlled experimental study of a lightweight Transformer-enhanced Attention U-Net on the Kvasir-SEG dataset. The proposed architecture retains the U-shaped convolutional encoder-decoder for efficient local feature extraction, filters encoder skip features through additive attention gates, and inserts a compact Transformer encoder at the lowest-resolution bottleneck to model longer-range spatial dependencies at limited cost. Four configurations are trained under identical conditions: standard U-Net, Attention U-Net, U-Net with the Transformer bottleneck, and the complete proposed model. The fixed protocol uses a 70/15/15 train-validation-test split, 256$\times$256 inputs, BCE-Dice loss, AdamW optimization, deterministic seed control, early stopping, and identical augmentation. Performance is evaluated using Dice, Intersection over Union, precision, recall, HD95, parameter count, and inference time. The best configuration was \BestModelName, obtaining a test Dice of \BestDice and IoU of \BestIoU; its Dice difference relative to standard U-Net was \DiceGain. The ablation design isolates the effect of each architectural component rather than comparing models trained under different pipelines. Source code, configurations, fixed splits, logs, evaluation scripts, and automatically generated paper assets are publicly available at \url{https://github.com/hammiroussama/lightweight-transformer-unet-kvasir}. The study provides a reproducible small-scale assessment of whether selective skip fusion and global bottleneck modeling improve polyp segmentation without excessive computational overhead.
+\end{abstract}
+
+\keywords{Polyp segmentation \and U-Net \and attention gate \and vision Transformer \and Kvasir-SEG \and reproducible experiment}
+
+\clearpage
+\setcounter{page}{1}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Colorectal polyps are clinically important because some may progress toward cancer, and colonoscopy is a primary procedure for detecting and removing them. Pixel-level segmentation can complement detection by estimating the exact extent of a polyp, supporting visualization, measurement, and subsequent computer-aided analysis. The task remains difficult because polyps vary in size, color, texture, morphology, camera distance, and illumination. Their boundaries may be partially occluded, blurred, or visually similar to surrounding mucosa.
+
+Deep learning has made U-Net a standard medical-segmentation baseline. Its contracting path extracts increasingly semantic features, while the expanding path reconstructs spatial resolution and combines decoder features with high-resolution encoder features through skip connections \cite{ronneberger2015unet}. This design is data-efficient and effective for localization, but two limitations motivate the present experiment. First, standard skip connections transfer all encoder responses, including irrelevant background activations. Attention U-Net addresses this issue by learning gates that emphasize target-related features before skip fusion \cite{oktay2018attention}. Second, convolutional operations model long-range relationships only indirectly through depth and downsampling. Transformers use self-attention to model interactions among distant tokens \cite{vaswani2017attention}; hybrid medical architectures such as TransUNet consequently combine convolutional localization with Transformer-based contextual modeling \cite{chen2024transunet}.
+
+This work investigates whether these two mechanisms are useful in a compact polyp-segmentation setting. Instead of making an uncontrolled comparison among unrelated published systems, the experiment changes only two architectural factors while holding the complete training pipeline constant. The research question is:
+
+\begin{quote}
+\emph{Do attention-gated skip connections and a lightweight Transformer bottleneck improve U-Net segmentation on Kvasir-SEG without introducing excessive parameter and inference costs?}
+\end{quote}
+
+The main contributions are:
+\begin{itemize}
+    \item a lightweight hybrid architecture combining attention-gated U-Net skips with a Transformer bottleneck at the lowest spatial resolution;
+    \item a controlled four-model ablation that isolates the effects of attention and Transformer context under identical optimization and data conditions;
+    \item evaluation using overlap, boundary, classification-style, and efficiency measures rather than a single accuracy score; and
+    \item a public reproducibility package containing code, configurations, fixed data splits, training histories, checkpoints, result-generation scripts, and the LaTeX paper.
+\end{itemize}
+
+The complete source code is available in the \href{https://github.com/hammiroussama/lightweight-transformer-unet-kvasir}{public GitHub repository}. Section~\ref{sec:related} reviews the relevant methods, Section~\ref{sec:method} presents the proposed architecture, Section~\ref{sec:experiments} defines the controlled protocol, Section~\ref{sec:results} reports the results, and Sections~\ref{sec:discussion} and \ref{sec:conclusion} discuss the findings and conclude the study.
+
+\section{Related Work}
+\label{sec:related}
+
+\subsection{U-Net-Based Medical Segmentation}
+
+U-Net consists of a symmetric encoder-decoder with skip connections between corresponding scales \cite{ronneberger2015unet}. The encoder produces contextual features through convolution and downsampling, while the decoder upsamples and combines semantic representations with spatial detail. This structure is especially suitable for medical tasks with limited annotated data. However, direct concatenation assumes that all encoder responses are useful for reconstruction.
+
+Attention U-Net introduced additive attention gates to condition encoder skips on coarser decoder context \cite{oktay2018attention}. The gates suppress irrelevant activations and highlight features associated with the target. Because the mechanism is inserted into skip pathways, it can improve selectivity with relatively limited overhead. For polyp segmentation, this may help when specular highlights, folds, instruments, or background mucosa create strong but irrelevant local responses.
+
+\subsection{Transformers in Medical Segmentation}
+
+Self-attention maps each token to query, key, and value representations and computes pairwise content-dependent interactions. The standard operation is
+\begin{equation}
+\operatorname{Attention}(Q,K,V)=\operatorname{Softmax}\left(\frac{QK^{\top}}{\sqrt{d_k}}\right)V.
+\end{equation}
+Transformers can therefore represent long-range dependencies explicitly, but their quadratic token complexity is expensive at high image resolution. Hybrid models reduce this cost by applying attention after convolutional downsampling. TransUNet is a representative example: convolutional features preserve local information, and a Transformer encoder captures global context before U-shaped decoding \cite{chen2024transunet}. The present method follows the same high-level motivation but uses a substantially smaller bottleneck module and no large pretrained Transformer backbone.
+
+\subsection{Kvasir-SEG}
+
+Kvasir-SEG contains 1,000 gastrointestinal polyp images and corresponding expert-verified masks \cite{jha2020kvasir}. Image resolutions vary, making fixed resizing necessary for batch training. The dataset is appropriate for a course-scale controlled experiment, but its size and single-domain nature limit conclusions about clinical generalization. This study therefore emphasizes internal ablation rather than claims of state-of-the-art performance.
+
+\section{Proposed Method}
+\label{sec:method}
+
+\subsection{Problem Formulation}
+
+Given an RGB colonoscopy image $X\in\mathbb{R}^{H\times W\times 3}$ and binary reference mask $Y\in\{0,1\}^{H\times W}$, the model predicts logits $Z=f_{\theta}(X)$. The foreground probability is $P=\sigma(Z)$, and the binary prediction is $\hat{Y}=\mathbb{I}(P\geq 0.5)$.
+
+\subsection{Architecture}
+
+Figure~\ref{fig:architecture} shows the proposed architecture. Four convolutional encoder stages progressively halve spatial resolution and double feature channels. At the deepest level, a depthwise convolution supplies spatial positional bias and a compact Transformer encoder processes flattened bottleneck tokens. The decoder then upsamples features through transposed convolution. Before each skip is concatenated, an additive attention gate uses the current decoder feature as a gating signal.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.94\textwidth}{!}{%
+\begin{tikzpicture}
+  \node[block,fill=gray!12] (input) at (0,0) {RGB image};
+  \node[enc] (e1) at (0,-1.2) {Encoder 1\\$32$ channels};
+  \node[enc] (e2) at (0,-2.5) {Encoder 2\\$64$ channels};
+  \node[enc] (e3) at (0,-3.8) {Encoder 3\\$128$ channels};
+  \node[enc] (e4) at (0,-5.1) {Encoder 4\\$256$ channels};
+  \node[trans] (t) at (4,-7.2) {Depthwise positional convolution\\+ 2-layer Transformer bottleneck\\$512$ channels, $16\times16$ tokens};
+  \node[dec] (d4) at (8,-5.1) {Decoder 4\\$256$ channels};
+  \node[dec] (d3) at (8,-3.8) {Decoder 3\\$128$ channels};
+  \node[dec] (d2) at (8,-2.5) {Decoder 2\\$64$ channels};
+  \node[dec] (d1) at (8,-1.2) {Decoder 1\\$32$ channels};
+  \node[block,fill=red!10] (out) at (8,0) {Binary mask logits};
+
+  \draw[flow] (input)--(e1);
+  \draw[flow] (e1)--node[right]{down}(e2);
+  \draw[flow] (e2)--(e3);
+  \draw[flow] (e3)--(e4);
+  \draw[flow] (e4)--(t);
+  \draw[flow] (t)--node[right]{up}(d4);
+  \draw[flow] (d4)--(d3);
+  \draw[flow] (d3)--(d2);
+  \draw[flow] (d2)--(d1);
+  \draw[flow] (d1)--(out);
+
+  \node[att] (a1) at (4,-1.2) {Attention\\gate};
+  \node[att] (a2) at (4,-2.5) {Attention\\gate};
+  \node[att] (a3) at (4,-3.8) {Attention\\gate};
+  \node[att] (a4) at (4,-5.1) {Attention\\gate};
+  \draw[skip] (e1)--(a1); \draw[flow] (a1)--(d1);
+  \draw[skip] (e2)--(a2); \draw[flow] (a2)--(d2);
+  \draw[skip] (e3)--(a3); \draw[flow] (a3)--(d3);
+  \draw[skip] (e4)--(a4); \draw[flow] (a4)--(d4);
+\end{tikzpicture}%
+}
+\caption{Proposed lightweight Transformer-enhanced Attention U-Net. The four experiments use the same encoder-decoder; attention gates and the Transformer bottleneck are enabled or disabled to form the controlled ablations.}
+\label{fig:architecture}
+\end{figure}
+
+For encoder skip $x$ and decoder gating feature $g$, the attention coefficient is
+\begin{equation}
+\alpha=\sigma\left(\psi^{\top}\operatorname{ReLU}(W_xx+W_gg+b)\right),
+\qquad \tilde{x}=\alpha\odot x.
+\end{equation}
+The filtered skip $\tilde{x}$ is concatenated with the upsampled decoder feature. The Transformer bottleneck first adds a depthwise-convolution positional residual, flattens the feature map into tokens, and applies two encoder layers with eight heads. Because attention is used only at $1/16$ input resolution, token count and memory remain much lower than full-resolution attention.
+
+\subsection{Training Objective}
+
+The loss combines binary cross-entropy and soft Dice loss:
+\begin{equation}
+\mathcal{L}=0.5\mathcal{L}_{\mathrm{BCE}}+0.5\mathcal{L}_{\mathrm{Dice}},
+\end{equation}
+where
+\begin{equation}
+\mathcal{L}_{\mathrm{Dice}}=1-\frac{2\sum_i p_i y_i+\epsilon}{\sum_i p_i^2+\sum_i y_i^2+\epsilon}.
+\end{equation}
+BCE supplies pixel-wise supervision, while Dice directly addresses foreground-background imbalance.
+
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Data Split and Preprocessing}
+
+The 1,000 Kvasir-SEG pairs are deterministically shuffled with seed 42 and divided into 700 training, 150 validation, and 150 testing images. The split is stored as a CSV file and reused unchanged by every experiment. Images and masks are resized to $256\times256$. Training augmentation includes horizontal flipping, occasional vertical flipping, rotation up to $20^{\circ}$, and random brightness/contrast adjustment. Validation and test images are resized and normalized without stochastic augmentation.
+
+The use of one fixed split supports controlled ablation but does not measure split variability. A stronger future study should repeat the experiment with multiple seeds or cross-validation.
+
+\subsection{Compared Configurations}
+
+\begin{table}[H]
+\centering
+\caption{Controlled architectural ablation.}
+\label{tab:ablation-design}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Attention skips} & \textbf{Transformer bottleneck}\\
+\midrule
+U-Net & No & No\\
+Attention U-Net & Yes & No\\
+Transformer U-Net & No & Yes\\
+Proposed model & Yes & Yes\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All configurations use base width 32, four downsampling stages, batch size 4, 30 maximum epochs, AdamW with learning rate $10^{-4}$ and weight decay $10^{-4}$ \cite{loshchilov2019adamw}, cosine learning-rate decay, mixed precision when CUDA is available, and early stopping after seven validation epochs without Dice improvement. The checkpoint with the highest validation Dice is evaluated once on the held-out test set.
+
+\subsection{Implementation and Computational Protocol}
+
+The experiments are implemented in PyTorch and executed on \HardwareName using PyTorch \TorchVersion and CUDA \CudaVersion. These values are generated from the evaluation logs rather than typed manually. Convolutional layers use batch normalization and ReLU activation, while the Transformer encoder uses pre-normalization, GELU feed-forward activation, residual connections, and dropout 0.1. The bottleneck contains 512 channels and eight attention heads, so each head receives a 64-dimensional representation. At the $16\times16$ bottleneck resolution, the token sequence contains 256 elements. This design limits the quadratic attention matrix to $256\times256$, which is substantially smaller than applying attention to all $256\times256$ input pixels.
+
+Training uses automatic mixed precision on CUDA to reduce memory use and accelerate compatible operations. Gradients are reset with \texttt{set\_to\_none=True}, and the best checkpoint is selected exclusively using validation Dice. Inference latency is measured after warm-up iterations, synchronized on CUDA, and divided by both the number of timed iterations and batch size. Parameter count includes all model parameters, while trainable parameter count is also stored in the JSON output. Because latency varies with hardware and software, the paper reports the exact device and treats timing as an implementation-specific efficiency measurement rather than a universal property of the architecture.
+
+\subsection{Leakage Prevention and Experimental Integrity}
+
+The test set is not used for early stopping, threshold tuning, architecture selection, or data augmentation decisions. A single CSV split is generated before model training and reused by all configurations, which prevents accidental differences in sample composition. Augmentation is applied only to the training subset. Validation and test transformations contain deterministic resizing and normalization. Each checkpoint stores the full configuration together with the model state, selected epoch, optimizer state, and best validation Dice, making it possible to verify which settings produced a reported result.
+
+The result pipeline also separates measurement from reporting. The evaluation script writes per-image metrics and aggregate statistics to machine-readable files. The paper values are then generated from those files through \texttt{generate\_paper\_assets.py}. This reduces the risk of copying a value from the wrong run, rounding inconsistently, or mixing validation and test results. The repository intentionally retains the raw histories and summaries but excludes the dataset and large checkpoints from normal version control.
+
+\subsection{Hyperparameter Rationale}
+
+The image size of 256 was selected as a compromise between preserving polyp boundaries and fitting all configurations on a consumer GPU. The base width of 32 keeps the convolutional baseline sufficiently expressive while leaving memory for the Transformer ablations. Batch size 4 is used unchanged across models so that optimization noise and batch-normalization behavior remain comparable. The learning rate $10^{-4}$ is conservative for training from scratch with AdamW, while cosine decay gradually reduces the update magnitude without requiring model-specific milestone selection. The equal BCE and Dice weights balance pixel-wise calibration with overlap optimization. Early stopping limits overfitting and avoids choosing a fixed epoch that may favor one architecture. No architecture-specific learning rate, augmentation, threshold, or training duration is introduced, because such tuning would weaken the interpretation of the ablation. These settings are not claimed to be globally optimal; rather, they define a transparent common operating point suitable for testing the two architectural hypotheses under limited time and computation.
+
+\subsection{Evaluation Metrics}
+
+Dice and IoU measure region overlap:
+\begin{equation}
+\mathrm{Dice}=\frac{2TP}{2TP+FP+FN},\qquad
+\mathrm{IoU}=\frac{TP}{TP+FP+FN}.
+\end{equation}
+Precision measures false-positive control, while recall measures the proportion of polyp pixels recovered. HD95 measures the 95th percentile of bidirectional boundary distances and captures contour errors not visible in overlap alone \cite{taha2015metrics}. HD95 is reported in pixels after resizing, so it should not be interpreted as a physical clinical distance. Efficiency is evaluated using parameter count and average inference milliseconds per image on the recorded device.
+
+\subsection{Reproducibility}
+
+The implementation fixes Python, NumPy, and PyTorch random seeds and requests deterministic algorithms where supported. Every run saves configuration, best and last checkpoints, per-epoch history, per-image test metrics, aggregate JSON metrics, and hardware information. The paper imports automatically generated LaTeX macros from the evaluation output, reducing manual transcription errors. The public repository is \url{https://github.com/hammiroussama/lightweight-transformer-unet-kvasir}.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Main Quantitative Results}
+
+\begin{table*}[t]
+\centering
+\caption{Test-set results under the identical protocol. HD95 is measured in resized-image pixels. Lower HD95 is better; higher values are better for all other accuracy metrics.}
+\label{tab:main-results}
+\scriptsize
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{Model} & \textbf{Dice} & \textbf{IoU} & \textbf{Precision} & \textbf{Recall} & \textbf{HD95} & \textbf{Parameters} & \textbf{ms/image}\\
+\midrule
+U-Net & \UNetDice & \UNetIoU & \UNetPrecision & \UNetRecall & \UNetHD & \UNetParams & \UNetLatency\\
+Attention U-Net & \AttentionUNetDice & \AttentionUNetIoU & \AttentionUNetPrecision & \AttentionUNetRecall & \AttentionUNetHD & \AttentionUNetParams & \AttentionUNetLatency\\
+Transformer U-Net & \TransformerUNetDice & \TransformerUNetIoU & \TransformerUNetPrecision & \TransformerUNetRecall & \TransformerUNetHD & \TransformerUNetParams & \TransformerUNetLatency\\
+Proposed model & \ProposedDice & \ProposedIoU & \ProposedPrecision & \ProposedRecall & \ProposedHD & \ProposedParams & \ProposedLatency\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The best configuration was \BestModelName, with Dice \BestDice and IoU \BestIoU. The Dice difference from the standard U-Net baseline was \DiceGain. Table~\ref{tab:main-results} should be interpreted together with efficiency: a small accuracy improvement may not justify a large latency or parameter increase. Because all runs use the same split and training procedure, the differences more directly reflect architectural changes than comparisons across unrelated papers.
+
+\IfFileExists{figures/test_dice_comparison.png}{
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{figures/test_dice_comparison.png}
+\caption{Test Dice comparison generated directly from the experiment summaries.}
+\label{fig:test-dice}
+\end{figure}
+}{\begin{figure}[H]\centering\fbox{\parbox{0.75\textwidth}{Run \texttt{python run\_all\_experiments.py} to generate the test Dice comparison.}}\caption{Placeholder for the automatically generated test Dice figure.}\end{figure}}
+
+\subsection{Training Behavior}
+
+\IfFileExists{figures/validation_dice_curves.png}{
+\begin{figure*}[t]
+\centering
+\begin{minipage}{0.48\textwidth}\centering
+\includegraphics[width=\linewidth]{figures/validation_dice_curves.png}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\centering
+\includegraphics[width=\linewidth]{figures/validation_loss_curves.png}
+\end{minipage}
+\caption{Validation Dice and loss curves generated from the saved training histories. Curves should be inspected for convergence, instability, and overfitting.}
+\label{fig:curves}
+\end{figure*}
+}{\begin{figure}[H]\centering\fbox{\parbox{0.75\textwidth}{Training curves are generated after all experiments finish.}}\caption{Placeholder for validation curves.}\end{figure}}
+
+The learning curves provide evidence beyond the final checkpoint. A model that reaches high validation Dice briefly but shows unstable loss may be less reliable than one with smoother convergence. Differences between training and validation metrics can also reveal overfitting on the relatively small dataset.
+
+\subsection{Qualitative Analysis}
+
+\IfFileExists{figures/qualitative_results.png}{
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/qualitative_results.png}
+\caption{Qualitative comparison on automatically selected difficult and strong test cases. The sample names and selection rule are recorded in \texttt{results/qualitative\_samples.csv}. The figure must be interpreted together with quantitative metrics because visually plausible masks may still contain clinically relevant boundary errors.}
+\label{fig:qualitative}
+\end{figure*}
+}{\begin{figure}[H]\centering\fbox{\parbox{0.75\textwidth}{Qualitative predictions are generated after all four checkpoints are evaluated.}}\caption{Placeholder for image, ground-truth, and four-model prediction comparisons.}\end{figure}}
+
+The qualitative figure deliberately includes low-Dice and high-Dice examples from the proposed model rather than showing only favorable cases. Difficult examples should be inspected for missed low-contrast regions, over-segmentation into surrounding mucosa, fragmented masks, and sensitivity to illumination or specular highlights.
+
+\section{Discussion}
+\label{sec:discussion}
+
+The ablation is designed to answer three questions. First, comparing Attention U-Net with U-Net measures whether filtering skip features improves polyp delineation. A gain would support the hypothesis that some shallow encoder activations are irrelevant or distracting; no gain would suggest that direct skips are already sufficient under this dataset and training regime. Second, comparing Transformer U-Net with U-Net measures whether long-range bottleneck modeling adds useful context. Because the bottleneck has only $16\times16=256$ tokens for a $256\times256$ input, the experiment evaluates global interaction without applying expensive attention at every scale. Third, comparing the complete model with both single-component variants indicates whether the mechanisms are complementary.
+
+Precision and recall should be examined together. Higher precision with lower recall indicates conservative masks that omit polyp regions, whereas higher recall with lower precision indicates over-segmentation. HD95 identifies large contour deviations that may be hidden by a similar average Dice. The efficiency columns are also necessary because an experimental improvement should be considered in relation to computation.
+
+Several limitations restrict the strength of the conclusions. Kvasir-SEG contains only 1,000 images from a specific application domain, and one fixed split cannot measure variance across partitions. All images are resized to a square resolution, which can distort aspect ratios and causes HD95 to be expressed in resized pixels. The experiment does not test external datasets such as CVC-ClinicDB, nor does it perform repeated-seed statistical testing. The Transformer module is intentionally lightweight and should not be interpreted as a reproduction of a large pretrained TransUNet. Finally, average inference time depends on hardware, software versions, batch size, numerical precision, and warm-up procedure.
+
+The results should therefore be presented as a reproducible controlled course experiment, not as clinical validation or a state-of-the-art claim. Biomedical rankings can be sensitive to evaluation design, so transparent protocol reporting is more valuable than unsupported superiority statements \cite{maierhein2018rankings}.
+
+\subsection{Threats to Validity}
+
+Several threats should be considered when interpreting the experiment. \textbf{Internal validity} concerns whether the observed differences are caused by the intended architectural changes. The shared split and training protocol reduce this threat, but stochastic optimization can still produce variation. One seed is sufficient for a time-limited course experiment but does not quantify run-to-run uncertainty. Repeating every configuration with at least three seeds and reporting mean, standard deviation, and paired per-image comparisons would strengthen the evidence.
+
+\textbf{Construct validity} concerns whether the selected metrics represent the desired segmentation quality. Dice and IoU emphasize area overlap, precision and recall distinguish over- and under-segmentation, and HD95 measures boundary discrepancy. Nevertheless, these metrics do not directly measure whether segmentation improves polyp detection, clinician interpretation, or patient outcomes. HD95 is calculated after resizing and in pixel units, so it has no direct physical interpretation. Qualitative review is included to expose typical errors, but a clinician-rated evaluation would be stronger.
+
+\textbf{External validity} concerns generalization beyond the study data. Kvasir-SEG represents one dataset and one type of endoscopic imagery. Performance may change with another hospital, endoscope manufacturer, bowel preparation quality, video compression, rare morphology, or external dataset. Resizing every image to a square may further change shape statistics. The current result should therefore be interpreted as evidence about the controlled Kvasir-SEG setting, not all colonoscopy environments.
+
+\textbf{Conclusion validity} concerns whether the evidence is sufficient to support the stated conclusion. A small numerical difference may arise from random initialization or data ordering rather than a meaningful architectural advantage. The paper therefore avoids claiming superiority unless the difference is consistent across metrics, supported by qualitative behavior, and reasonable relative to parameter and latency cost. Future work should use repeated seeds, confidence intervals, bootstrapping of per-image metrics, and external testing.
+
+\section{Code and Reproducibility}
+
+All source code is publicly available in the \href{https://github.com/hammiroussama/lightweight-transformer-unet-kvasir}{project GitHub repository}. The repository contains model definitions, four fixed configurations, deterministic split generation, training and evaluation scripts, unit tests, a synthetic smoke test, result CSV/JSON generation, and scripts that transfer measured metrics into this paper. The dataset itself is not redistributed; users are directed to the official Kvasir-SEG source and must follow its research and educational terms.
+
+A full reproduction is executed with:
+\begin{verbatim}
+python run_all_experiments.py
+\end{verbatim}
+The command trains all ablations, evaluates the selected checkpoints, writes the result tables, and creates the plotted paper figures. This automation is intended to prevent accidental mixing of results from different runs.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper presented a controlled experimental comparison of standard U-Net, Attention U-Net, a Transformer-bottleneck U-Net, and a lightweight architecture combining both mechanisms for Kvasir-SEG polyp segmentation. The experiment was designed to isolate architectural effects by keeping the split, seed, preprocessing, augmentation, loss, optimizer, learning-rate schedule, checkpoint rule, and evaluation procedure identical. The best configuration was \BestModelName, which obtained Dice \BestDice and IoU \BestIoU; the measured Dice difference from baseline was \DiceGain. Attention gates were included to suppress irrelevant skip responses, while the compact Transformer bottleneck was intended to model long-range context at a low spatial resolution. Evaluation included Dice, IoU, precision, recall, HD95, parameter count, and inference time so that accuracy could be interpreted together with boundary quality and efficiency. The study is intentionally limited to one relatively small dataset and one fixed split; therefore, it does not establish clinical generalization or state-of-the-art performance. Future work should repeat the experiment across random seeds, test external polyp datasets, preserve original aspect ratios, evaluate statistical uncertainty, and examine failure cases with clinician input. The public repository provides a complete reproducibility trail from configurations and source code to raw result files and automatically generated paper values.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,24 @@
+experiment_name: Attention U-Net
+seed: 42
+output_dir: runs/attention_unet
+data:
+  root: data/Kvasir-SEG
+  split_csv: splits/kvasir_seed42.csv
+  image_size: 256
+  num_workers: 4
+  train_ratio: 0.70
+  val_ratio: 0.15
+model:
+  name: attention_unet
+  in_channels: 3
+  out_channels: 1
+  base_channels: 32
+train:
+  epochs: 30
+  batch_size: 4
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  bce_weight: 0.5
+  dice_weight: 0.5
+  threshold: 0.5
+  early_stopping_patience: 7
