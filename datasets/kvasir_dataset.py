@@ -134,12 +134,14 @@ class KvasirSegDataset(Dataset):
         return {"image": image_t, "mask": mask_t, "name": image_path.name}
 
 
-def build_loaders(config: dict) -> dict[str, DataLoader]:
+def build_loaders(config: dict, splits=("train", "val", "test"), require_split: bool = False) -> dict[str, DataLoader]:
     data_cfg = config["data"]
     train_cfg = config["train"]
     root = Path(data_cfg["root"])
     split_csv = Path(data_cfg["split_csv"])
     if not split_csv.exists():
+        if require_split:
+            raise FileNotFoundError(f"Saved split is required for evaluation: {split_csv}")
         create_split_csv(
             root,
             split_csv,
@@ -148,7 +150,15 @@ def build_loaders(config: dict) -> dict[str, DataLoader]:
             val_ratio=float(data_cfg.get("val_ratio", 0.15)),
         )
     common = dict(root=root, split_csv=split_csv, image_size=int(data_cfg["image_size"]))
-    datasets = {split: KvasirSegDataset(split=split, **common) for split in ("train", "val", "test")}
+    with split_csv.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    for field in ("image", "mask"):
+        names = [row[field].replace("\\", "/") for row in rows]
+        if len(names) != len(set(names)):
+            raise ValueError(f"Duplicate {field} in split CSV; possible data leakage")
+    if any(row["split"] not in {"train", "val", "test"} for row in rows):
+        raise ValueError("Unknown split label in CSV")
+    datasets = {split: KvasirSegDataset(split=split, **common) for split in splits}
     workers = int(data_cfg.get("num_workers", 4))
     pin_memory = bool(torch.cuda.is_available())
     generator = torch.Generator()

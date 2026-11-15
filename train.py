@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import shutil
 from pathlib import Path
 
 import torch
@@ -18,21 +19,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", required=True, help="Path to a YAML configuration file.")
     parser.add_argument("--epochs", type=int, default=None, help="Optional epoch override.")
     parser.add_argument("--device", default=None, help="cuda, cpu, or cuda:0. Auto-detected by default.")
+    parser.add_argument("--output", default=None, help="New, empty run directory.")
+    parser.add_argument("--data-root", default=None)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     config = load_config(args.config)
+    if args.output:
+        config["output_dir"] = args.output
+    if args.data_root:
+        config["data"]["root"] = args.data_root
     if args.epochs is not None:
         config["train"]["epochs"] = int(args.epochs)
     seed = int(config.get("seed", 42))
     set_seed(seed)
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
-    output_dir = ensure_dir(config["output_dir"])
+    output_dir = Path(config["output_dir"])
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise ValueError("Run directory is not empty. Use --output with a new directory to preserve existing results.")
+    output_dir = ensure_dir(output_dir)
     checkpoint_dir = ensure_dir(output_dir / "checkpoints")
 
-    loaders = build_loaders(config)
+    loaders = build_loaders(config, splits=("train", "val"))
+    shutil.copy2(config["data"]["split_csv"], output_dir / "split.csv")
     model = build_model(config["model"]).to(device)
     criterion = BCEDiceLoss(
         bce_weight=float(config["train"].get("bce_weight", 0.5)),
@@ -43,8 +54,18 @@ def main() -> None:
         lr=float(config["train"]["learning_rate"]),
         weight_decay=float(config["train"].get("weight_decay", 1e-4)),
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(int(config["train"]["epochs"]), 1)
+    epochs = int(config["train"]["epochs"])
+    warmup = int(config["train"].get("warmup_epochs", 0))
+    if not 0 <= warmup < epochs:
+        raise ValueError("warmup_epochs must be nonnegative and smaller than epochs")
+    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=max(epochs - warmup, 1),
+        eta_min=float(config["train"].get("min_learning_rate", 0.0)),
+    )
+    scheduler = cosine if warmup == 0 else torch.optim.lr_scheduler.SequentialLR(
+        optimizer,
+        [torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=warmup), cosine],
+        milestones=[warmup],
     )
     scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
     threshold = float(config["train"].get("threshold", 0.5))
@@ -80,6 +101,7 @@ def main() -> None:
             scaler=scaler,
             threshold=threshold,
             description=f"train {epoch}",
+            grad_clip=config["train"].get("grad_clip"),
         )
         val_metrics = run_epoch(
             model,

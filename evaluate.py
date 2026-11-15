@@ -21,6 +21,9 @@ from utils.seed import set_seed
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate one trained experiment.")
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--split", choices=("val", "test"), default="val",
+                        help="Use validation during development; test only after selecting the configuration.")
+    parser.add_argument("--data-root", default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--timed-iterations", type=int, default=50)
@@ -55,18 +58,23 @@ def main() -> None:
     checkpoint_path = Path(args.checkpoint)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     config = checkpoint["config"]
+    if args.data_root:
+        config["data"]["root"] = args.data_root
+    saved_split = checkpoint_path.parent.parent / "split.csv"
+    if saved_split.exists():
+        config["data"]["split_csv"] = str(saved_split)
     seed = int(config.get("seed", 42))
     set_seed(seed)
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     model = build_model(config["model"]).to(device)
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
-    loader = build_loaders(config)["test"]
+    loader = build_loaders(config, splits=(args.split,), require_split=True)[args.split]
     threshold = float(config["train"].get("threshold", 0.5))
     rows: list[dict[str, float | str]] = []
 
     with torch.no_grad():
-        for batch in tqdm(loader, desc="test", leave=False):
+        for batch in tqdm(loader, desc=args.split, leave=False):
             images = batch["image"].to(device, non_blocking=True)
             masks = batch["mask"].to(device, non_blocking=True)
             logits = model(images)
@@ -81,6 +89,9 @@ def main() -> None:
                 rows.append({"name": name, **metrics, "hd95_pixels": hd95(pred_np, mask_np)})
 
     output_dir = checkpoint_path.parent.parent
+    if args.split == "val":
+        output_dir = output_dir / "validation"
+    output_dir.mkdir(parents=True, exist_ok=True)
     per_image_path = output_dir / "per_image_metrics.csv"
     with per_image_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -92,7 +103,9 @@ def main() -> None:
     summary: dict[str, float | int | str] = {
         "experiment_name": str(config["experiment_name"]),
         "checkpoint": str(checkpoint_path),
-        "test_samples": len(rows),
+        "split": args.split,
+        "samples": len(rows),
+        f"{args.split}_samples": len(rows),
         "parameters": sum(p.numel() for p in model.parameters()),
         "trainable_parameters": sum(p.numel() for p in model.parameters() if p.requires_grad),
         "inference_ms_per_image": latency,

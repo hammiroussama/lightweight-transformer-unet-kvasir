@@ -10,12 +10,14 @@ class DiceLoss(nn.Module):
         self.smooth = smooth
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        probs = torch.sigmoid(logits)
+        # Half-precision reductions can overflow on large foreground regions.
+        probs = torch.sigmoid(logits.float())
+        targets = targets.float()
         dims = tuple(range(1, probs.ndim))
         intersection = (probs * targets).sum(dims)
         denominator = probs.square().sum(dims) + targets.square().sum(dims)
         dice = (2 * intersection + self.smooth) / (denominator + self.smooth)
-        return 1 - dice.mean()
+        return 1 - dice.clamp(max=1.0).mean()
 
 
 class BCEDiceLoss(nn.Module):

@@ -28,6 +28,14 @@ IoU, precision, recall, HD95 in resized-image pixels, parameter count, and infer
 - Seed: 42
 - Fixed CSV split: `splits/kvasir_seed42.csv`
 - Test set is used once after model selection on validation data.
-- All reported numbers must be copied from `results/summary.csv` or generated LaTeX macros.
+- All reported numbers must come from saved evaluation outputs.
 - Do not manually alter metrics.
-- Record GPU, CUDA, PyTorch version, and date of execution in the paper.
+- Record GPU, CUDA, PyTorch version, and evaluation date alongside the results.
+
+## New candidate runs
+
+The extended-training configuration is separate from the original controlled architecture comparison. It changes the training budget, scheduler, clipping, and stopping patience. Compare validation Dice against a fresh baseline using the same corrected loss and original split. Keep architecture, image size, batch size, and seed fixed for this first comparison. Do not interpret the outcome as an isolated effect of one hyperparameter.
+
+The updated Dice loss uses float32 reductions; historical scores remain historical measurements and are not silently replaced. Run `evaluate.py --split val` during development. Use `--split test` only once the candidate is selected. Repeat promising configurations with additional seeds before claiming a reliable improvement.
+
+Each new run stores its split CSV. For historical runs without this copy, evaluation requires the original configured CSV and will not generate a replacement. Keep the same split across training seeds.

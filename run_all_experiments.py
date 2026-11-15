@@ -26,11 +26,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--skip-training", action="store_true")
+    parser.add_argument("--final-test", action="store_true", help="Confirm model selection is complete before running all held-out evaluations.")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if not args.final_test:
+        raise SystemExit("Use train.py and evaluate.py --split val during development. Add --final-test only after model selection.")
     python = sys.executable
     summaries = []
     for config_path in CONFIGS:
@@ -49,7 +52,7 @@ def main() -> None:
             run(command)
         if not checkpoint.exists():
             raise FileNotFoundError(f"Missing checkpoint: {checkpoint}")
-        command = [python, "evaluate.py", "--checkpoint", str(checkpoint)]
+        command = [python, "evaluate.py", "--checkpoint", str(checkpoint), "--split", "test"]
         if args.device:
             command += ["--device", args.device]
         run(command)

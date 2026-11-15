@@ -17,6 +17,7 @@ def run_epoch(
     scaler: torch.amp.GradScaler | None = None,
     threshold: float = 0.5,
     description: str = "epoch",
+    grad_clip: float | None = None,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -32,9 +33,14 @@ def run_epoch(
         with torch.set_grad_enabled(training), context:
             logits = model(images)
             loss = criterion(logits, masks)
+        if not torch.isfinite(loss):
+            raise FloatingPointError(f"Non-finite loss in {description}; stopping before updating weights.")
         if training:
             assert scaler is not None
             scaler.scale(loss).backward()
+            if grad_clip is not None:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             scaler.step(optimizer)
             scaler.update()
         metrics = binary_metrics_from_logits(logits.detach(), masks, threshold)

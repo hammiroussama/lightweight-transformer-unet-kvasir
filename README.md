@@ -1,275 +1,122 @@
-# Structural and Visual Intelligence for Colonoscopy Polyp Segmentation
+# Polyp Segmentation with U-Net and Transformers
 
-Official source code, experimental results, and paper materials for the Advanced Artificial Intelligence course project:
+A PyTorch computer-vision project that identifies polyp regions in colonoscopy images. It compares four segmentation architectures and includes reproducible training, image-level evaluation, mask prediction, and visual overlays.
 
-> **Structural and Visual Intelligence for Colonoscopy Polyp Segmentation:  
-> A Controlled Ablation of Attention Gates and a Lightweight Transformer Bottleneck on Kvasir-SEG**
+**Best recorded result: 85.22% Dice and 77.66% IoU on 150 held-out Kvasir-SEG images**, using a Transformer U-Net trained from scratch with 11.97 million parameters.
 
-**Author:** Oussama Hammir  
-**Student ID:** 25sf51073  
-**Supervisor:** Luyao  
-**Institution:** Harbin Institute of Technology, Shenzhen  
-**Course:** Advanced Artificial Intelligence  
-**Email:** hammiroussama@gmail.com  
+## Project highlights
 
-**Repository:**  
-https://github.com/hammiroussama/lightweight-transformer-unet-kvasir
+- Implemented U-Net, attention-gated U-Net, Transformer U-Net, and a combined architecture.
+- Integrated a Transformer bottleneck to model spatial context within convolutional features.
+- Built paired image/mask augmentation, mixed-precision training, and validation-based checkpoint selection.
+- Compared segmentation quality, boundary distance, parameter count, and inference speed.
+- Added automated tests, split checks, and safeguards against overwriting experiments.
 
-## Quick links
+**Stack:** Python · PyTorch · OpenCV · NumPy · SciPy · Matplotlib · pytest
 
-- [Final experimental paper](paper/Oussama_Hammir_Final_Advanced_AI_Report.pdf)
-- [LaTeX paper source](paper/templateArxiv.tex)
-- [Main experimental results](results/summary.csv)
-- [Ablation results](results/ablation.csv)
-- [Statistical comparisons](results/statistical_tests.csv)
-- [Qualitative predictions](paper/figures/qualitative_results.png)
+## Recorded results
 
-## Project overview
+These are the existing baseline results from [the saved metrics](results/summary.csv), not results from the new extended-training configuration.
 
-A colorectal polyp is a tissue growth on the inner surface of the colon or rectum. During colonoscopy, accurate pixel-level segmentation can help computer-aided systems estimate a polyp's location, shape, and boundary.
+| Model | Dice | IoU | Recall | Parameters | ms/image* |
+|---|---:|---:|---:|---:|---:|
+| U-Net | 76.35% | 66.60% | 77.09% | 7.76M | 0.97 |
+| Attention U-Net | 82.31% | 73.89% | 83.00% | 7.85M | 1.66 |
+| **Transformer U-Net** | **85.22%** | **77.66%** | 86.47% | 11.97M | 1.66 |
+| Attention + Transformer U-Net | 84.84% | 76.84% | **86.93%** | 12.06M | 2.67 |
 
-This project studies two architectural modifications to a standard U-Net:
+Transformer U-Net achieved the highest Dice and IoU. Combining attention gates with the Transformer increased recall but did not improve overlap and added computation.
 
-1. **Attention-gated skip connections**, which aim to suppress irrelevant encoder features before skip fusion.
-2. **A lightweight Transformer bottleneck**, which aims to model long-range relationships after convolutional downsampling.
+*Forward-pass time averaged per image in batches of four on an RTX 4090 at 256×256 resolution, excluding preprocessing. This is not single-image end-to-end latency. Metrics are averages across images. Each architecture has one recorded seed (42); per-image standard deviations do not measure variability across training runs.*
 
-The experiment connects three topics from the Advanced Artificial Intelligence course:
+![Recorded test Dice comparison](docs/images/test_dice_comparison.png)
 
-- **Structural intelligence:** CNN and U-Net architecture design.
-- **Visual intelligence:** medical-image segmentation and pixel-level prediction.
-- **Transformer intelligence:** self-attention for global contextual modeling.
+## Segmentation examples
 
-## Research question
+![Existing qualitative comparison](docs/images/qualitative_results.png)
 
-Does adding attention-gated skip connections and a lightweight Transformer bottleneck improve U-Net polyp segmentation under an otherwise identical training and evaluation protocol?
+The combined architecture is labeled “Proposed” in legacy result files and figures.
 
-## Controlled experiments
+## Setup
 
-| Configuration | Attention gates | Transformer bottleneck |
-|---|---:|---:|
-| U-Net | No | No |
-| Attention U-Net | Yes | No |
-| Transformer U-Net | No | Yes |
-| Proposed model | Yes | Yes |
-
-All four configurations use the same dataset split, random seed, image size, augmentation, loss function, optimizer, learning rate, early-stopping rule, checkpoint-selection criterion, and evaluation threshold.
-
-## Main experimental findings
-
-All models were evaluated on the same held-out test set of 150 images.
-
-| Model | Dice ↑ | IoU ↑ | Precision ↑ | Recall ↑ | HD95 ↓ | Parameters | Latency/image ↓ |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| U-Net | 0.7635 | 0.6660 | 0.8476 | 0.7709 | 50.01 px | 7.76 M | 0.97 ms |
-| Attention U-Net | 0.8231 | 0.7389 | 0.8802 | 0.8300 | 36.88 px | 7.85 M | 1.66 ms |
-| **Transformer U-Net** | **0.8522** | **0.7766** | **0.8838** | 0.8647 | **29.59 px** | 11.97 M | 1.66 ms |
-| Proposed model | 0.8484 | 0.7684 | 0.8695 | **0.8693** | 31.15 px | 12.06 M | 2.67 ms |
-
-**Transformer U-Net achieved the strongest overall segmentation performance.** Compared with standard U-Net, it improved Dice by 0.0887 and reduced HD95 from 50.01 to 29.59 pixels. Attention U-Net also improved the baseline with little parameter overhead. The combined attention-plus-Transformer model achieved the highest recall, but it did not improve Dice or IoU over Transformer U-Net and required greater inference time.
-
-The standard deviations stored in `results/summary.csv` describe variation across individual test images. They are not standard deviations across repeated training seeds because each configuration was trained once with seed 42.
-
-## Repository structure
-
-```text
-configs/                  Four controlled YAML configurations
-datasets/                 Kvasir-SEG loader and split-generation code
-models/                   U-Net, attention gates, Transformer bottleneck
-utils/                    Losses, metrics, training engine, reproducibility
-splits/                   Fixed deterministic train/validation/test split
-results/                  Metrics, ablation results, and statistical comparisons
-paper/                    Final PDF, LaTeX source, and generated figures
-scripts/                  Synthetic smoke-test dataset generator
-tests/                    Model-shape and metric tests
-train.py                  Train one configuration
-evaluate.py               Evaluate Dice, IoU, HD95, parameters, and latency
-predict.py                Predict and visualize one image
-run_all_experiments.py    Execute the complete four-model ablation
-generate_paper_assets.py  Generate plots and LaTeX result macros
-```
-
-## 1. Environment setup
-
-Create a virtual environment:
+Use Python 3.10 or 3.11. Install a PyTorch build suitable for your machine, then:
 
 ```bash
-python -m venv .venv
-```
-
-Linux/macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-Windows PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-Install the dependencies:
-
-```bash
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pytest -q tests
 ```
 
-Recommended hardware is an NVIDIA GPU with at least 6 GB of VRAM. The default input size is 256 × 256 pixels and the default batch size is 4. Reduce the batch size to 2 when memory is insufficient.
-
-## 2. Reported experimental environment
-
-- GPU: NVIDIA GeForce RTX 4090
-- Python: 3.10.12
-- PyTorch: 2.5.1+cu121
-- CUDA runtime: 12.1
-- Input size: 256 × 256
-- Batch size: 4
-- Random seed: 42
-- Split: 70% training, 15% validation, and 15% testing
-- Test samples: 150
-
-## 3. Dataset
-
-Download Kvasir-SEG from its official research-dataset page:
-
-```text
-https://datasets.simula.no/kvasir-seg/
-```
-
-The repository does **not** redistribute the dataset. Users must follow the official research and educational terms and cite the Kvasir-SEG dataset paper.
-
-Arrange the extracted data as follows:
+Download Kvasir-SEG from the [official dataset website](https://datasets.simula.no/kvasir-seg/) and arrange it as:
 
 ```text
 data/Kvasir-SEG/
-├── images/
-│   ├── cju0qkwl35piu0993l0dewei2.jpg
-│   └── ...
-└── masks/
-    ├── cju0qkwl35piu0993l0dewei2.jpg
-    └── ...
+  images/
+  masks/
 ```
 
-Image and mask basenames must match. The experiment uses the deterministic split stored in:
+The baseline uses 700 training, 150 validation, and 150 test images. Reuse the original `splits/kvasir_seed42.csv` when comparing with existing runs. Training creates a deterministic split only if it is absent; evaluation requires an existing split. Dataset files and trained weights are not included.
+
+## Train
+
+Run commands from the repository root. Baseline Transformer U-Net:
+
+```bash
+python train.py --config configs/transformer_unet.yaml --output runs/transformer_baseline_new
+```
+
+Candidate for improving validation performance:
+
+```bash
+python train.py --config configs/transformer_unet_extended.yaml --output runs/transformer_extended_new
+```
+
+The candidate keeps the architecture, split, resolution, and batch size fixed. It allows 100 epochs, uses five warmup epochs followed by cosine decay, clips gradients, and waits 25 epochs without validation improvement before stopping. This is an experiment, not a verified accuracy improvement. The updated loss computes Dice reductions in float32 to avoid half-precision overflow.
+
+Use a new output directory for each experiment. History, checkpoints, and a copy of the split are saved there. `--data-root /path/to/Kvasir-SEG` overrides the dataset location; `--device cpu` enables CPU execution. Existing checkpoint formats remain supported.
+
+## Validate and evaluate
+
+Compare original and candidate checkpoints on validation data before selecting a configuration:
+
+```bash
+python evaluate.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --split val
+```
+
+Validation results go into the run's `validation/` directory. Once configuration selection is complete, explicitly evaluate the held-out test set:
+
+```bash
+python evaluate.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --split test
+```
+
+Test results go into `metrics.json` and `per_image_metrics.csv` in the run directory. Do not tune training settings on test scores. Keep new results separate from the baseline table until measured and verified. The batch experiment runner requires `--final-test` because it evaluates the held-out split.
+
+## Predict a mask and overlay
+
+```bash
+python predict.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --image path/to/image.jpg --output predictions/mask.png
+```
+
+This saves a binary mask at the original image dimensions and a red overlay beside it.
+
+## Project layout
 
 ```text
-splits/kvasir_seed42.csv
+configs/       Baseline and candidate settings
+datasets/      Paired loading, augmentation, and splits
+models/        U-Net, attention gates, and Transformer bottleneck
+utils/         Losses, metrics, training, and checkpoint utilities
+tests/         Model, metric, and training-safety checks
+results/       Existing measured benchmark results
+docs/          Experiment protocol and example figures
+train.py       Training and validation checkpoint selection
+evaluate.py    Validation or explicit held-out evaluation
+predict.py     Single-image mask and overlay export
 ```
 
-## 4. Validate the implementation
+## Scope and limitations
 
-Run the unit tests:
+This portfolio project is not a clinical diagnostic system. Evaluation covers one dataset and one seed per baseline. External-dataset generalization and variability across seeds remain unmeasured. More training may or may not outperform the existing baseline; select new experiments using validation results.
 
-```bash
-pytest -q
-```
+## License and dataset credit
 
-A small synthetic end-to-end test can be run without the real dataset:
-
-```bash
-python scripts/create_smoke_dataset.py --samples 24 --size 96
-python train.py --config configs/unet.yaml --epochs 1 --device cpu
-python evaluate.py --checkpoint runs/unet/checkpoints/best.pt --device cpu --warmup 1 --timed-iterations 2
-```
-
-Delete the synthetic `data/Kvasir-SEG` directory before installing the real dataset.
-
-## 5. Run one experiment
-
-Train and evaluate standard U-Net:
-
-```bash
-python train.py --config configs/unet.yaml
-python evaluate.py --checkpoint runs/unet/checkpoints/best.pt
-```
-
-Replace the configuration and checkpoint path to run another model.
-
-## 6. Run the complete ablation study
-
-```bash
-python run_all_experiments.py
-```
-
-This command trains and evaluates all four configurations and then creates:
-
-```text
-results/summary.csv
-results/ablation.csv
-results/qualitative_samples.csv
-paper/results_macros.tex
-paper/figures/validation_dice_curves.png
-paper/figures/validation_loss_curves.png
-paper/figures/test_dice_comparison.png
-paper/figures/qualitative_results.png
-```
-
-The LaTeX paper reads the generated result macros directly, reducing transcription errors between experimental logs and the reported paper values.
-
-## 7. Reproduce with explicit commands
-
-```bash
-python train.py --config configs/unet.yaml
-python evaluate.py --checkpoint runs/unet/checkpoints/best.pt
-
-python train.py --config configs/attention_unet.yaml
-python evaluate.py --checkpoint runs/attention_unet/checkpoints/best.pt
-
-python train.py --config configs/transformer_unet.yaml
-python evaluate.py --checkpoint runs/transformer_unet/checkpoints/best.pt
-
-python train.py --config configs/proposed_model.yaml
-python evaluate.py --checkpoint runs/proposed_model/checkpoints/best.pt
-
-python generate_paper_assets.py
-```
-
-## 8. Experimental outputs
-
-- [Main results](results/summary.csv)
-- [Ablation analysis](results/ablation.csv)
-- [Statistical tests](results/statistical_tests.csv)
-- [Qualitative sample selection](results/qualitative_samples.csv)
-- [Validation Dice curves](paper/figures/validation_dice_curves.png)
-- [Validation loss curves](paper/figures/validation_loss_curves.png)
-- [Test Dice comparison](paper/figures/test_dice_comparison.png)
-- [Qualitative model comparison](paper/figures/qualitative_results.png)
-
-## 9. Compile the paper
-
-Copy the `paper/` directory into Overleaf, or compile locally:
-
-```bash
-cd paper
-pdflatex templateArxiv.tex
-bibtex templateArxiv
-pdflatex templateArxiv.tex
-pdflatex templateArxiv.tex
-```
-
-The final compiled report is available here:
-
-- [Oussama Hammir — Final Advanced AI Report](paper/Oussama_Hammir_Final_Advanced_AI_Report.pdf)
-
-## Reproducibility safeguards
-
-- Fixed random seed and deterministic settings
-- One fixed data split reused by every model
-- Identical preprocessing and augmentation
-- Identical optimizer, loss, learning rate, and batch size
-- Checkpoint selection based only on validation Dice
-- Test evaluation performed after checkpoint selection
-- Automatic CSV and JSON logging
-- Automatically generated LaTeX result macros
-- Parameter-count and inference-time reporting
-- Unit tests and synthetic smoke-test support
-- Public code, results, figures, and paper source
-
-## Limitations
-
-Kvasir-SEG contains 1,000 annotated polyp images from one dataset. The experiment is appropriate for a controlled course project, but it is insufficient to establish clinical generalization. Each configuration was trained once with seed 42, so run-to-run uncertainty was not measured. Future work should include multiple seeds, confidence intervals, external datasets, cross-center evaluation, and clinician assessment.
-
-## Citation
-
-Please cite the papers listed in [`paper/references.bib`](paper/references.bib) when using this project. The dataset must also be cited according to the official Kvasir-SEG instructions.
+Code is available under the [MIT license](LICENSE). Kvasir-SEG is provided by its dataset creators; follow the [official terms and attribution instructions](https://datasets.simula.no/kvasir-seg/). The code license does not grant rights to redistribute the dataset.
