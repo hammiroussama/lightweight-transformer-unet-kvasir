@@ -1,2 +1,0 @@
-Source code and reproducibility repository:
-https://github.com/hammiroussama/lightweight-transformer-unet-kvasir

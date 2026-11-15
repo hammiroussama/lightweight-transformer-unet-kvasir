@@ -71,11 +71,7 @@ def main() -> None:
         "parameters",
         "inference_ms_per_image",
     ]].to_csv("results/ablation.csv", index=False)
-    asset_command = [python, "generate_paper_assets.py"]
-    if args.device:
-        asset_command += ["--device", args.device]
-    run(asset_command)
-    print("Completed all experiments. See results/ and paper/figures/.")
+    print("Completed all experiments. See results/ for comparison tables and each run directory for evaluation details.")
 
 
 if __name__ == "__main__":
