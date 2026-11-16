@@ -1,8 +1,33 @@
 # Polyp Segmentation with U-Net and Transformers
 
+## Extended-training result
+
+The extended-training Transformer U-Net achieved **87.23% Dice**
+and **80.42% IoU** on 150 held-out Kvasir-SEG images.
+
+| Test metric | Result |
+|---|---:|
+| Dice | 87.23% |
+| IoU | 80.42% |
+| Precision | 89.24% |
+| Recall | 90.32% |
+| HD95 at 256×256 resolution | 25.93 pixels |
+
+Training stopped at epoch 98; the best validation checkpoint was selected
+at epoch 73. This is a single-seed result (seed 42).
+
+The earlier architecture comparison is retained as historical evidence.
+Identical splits between the historical and extended runs have not been
+verified, so these scores do not establish a controlled improvement.
+
+[Saved test metrics](results/transformer-extended-20261115-164954/metrics.json) ·
+[Training configuration](results/transformer-extended-20261115-164954/config.json) ·
+[Saved split](results/transformer-extended-20261115-164954/split.csv)
+
+
 A PyTorch computer-vision project that identifies polyp regions in colonoscopy images. It compares four segmentation architectures and includes reproducible training, image-level evaluation, mask prediction, and visual overlays.
 
-**Best recorded result: 85.22% Dice and 77.66% IoU on 150 held-out Kvasir-SEG images**, using a Transformer U-Net trained from scratch with 11.97 million parameters.
+**Historical baseline result: 85.22% Dice and 77.66% IoU on 150 held-out Kvasir-SEG images**, using a Transformer U-Net trained from scratch with 11.97 million parameters.
 
 ## Project highlights
 

@@ -17,3 +17,6 @@ paper/*.log
 paper/*.out
 paper/*.pdf
 !checkpoints/.gitkeep
+/logs/
+/runs/
+/splits/
