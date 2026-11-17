@@ -1,29 +1,39 @@
 # Polyp Segmentation with U-Net and Transformers
 
-## Extended-training result
+## Extended-training results
 
-The extended-training Transformer U-Net achieved **87.23% Dice**
-and **80.42% IoU** on 150 held-out Kvasir-SEG images.
+Both models used identical training, validation, and test splits, with
+the same training recipe and seed (42). Checkpoints were selected using
+validation Dice. Test results below cover 150 images.
 
-| Test metric | Result |
-|---|---:|
-| Dice | 87.23% |
-| IoU | 80.42% |
-| Precision | 89.24% |
-| Recall | 90.32% |
-| HD95 at 256×256 resolution | 25.93 pixels |
+| Test metric | Transformer U-Net | Attention + Transformer U-Net |
+|---|---:|---:|
+| Dice | 87.23% | 87.44% |
+| IoU | 80.42% | 81.05% |
+| Precision | 89.24% | 91.59% |
+| Recall | 90.32% | 87.31% |
+| HD95 (pixels, lower is better) | 25.93 | 25.16 |
+| Forward time (ms/image) | 0.82 | 1.91 |
 
-Training stopped at epoch 98; the best validation checkpoint was selected
-at epoch 73. This is a single-seed result (seed 42).
+The combined model achieved **87.44% Dice** and
+**81.05% IoU**, exceeding Transformer-only Dice by
+**0.21 percentage points** in this run.
+It improved precision and HD95, but had lower recall and longer inference time.
 
-The earlier architecture comparison is retained as historical evidence.
-Identical splits between the historical and extended runs have not been
-verified, so these scores do not establish a controlled improvement.
+This is a single-seed comparison, not evidence of consistent superiority
+across repeated runs. GPU nondeterminism warnings were observed during
+combined-model training. Timing measures forward passes per image in batches
+of four on an RTX 4090, excluding preprocessing.
 
-[Saved test metrics](results/transformer-extended-20261115-164954/metrics.json) ·
-[Training configuration](results/transformer-extended-20261115-164954/config.json) ·
-[Saved split](results/transformer-extended-20261115-164954/split.csv)
+The combined checkpoint was selected at epoch 82; Transformer-only at epoch 73.
 
+- [Transformer-only evidence](results/transformer-extended-20261115-164954/metrics.json)
+- [Combined-model evidence](results/attention-transformer-extended-20261116-200334/metrics.json)
+- [Combined training configuration](results/attention-transformer-extended-20261116-200334/config.json)
+- [Combined saved split](results/attention-transformer-extended-20261116-200334/split.csv)
+
+The original architecture comparison below is historical. Its split has
+not been verified against these extended-training runs.
 
 A PyTorch computer-vision project that identifies polyp regions in colonoscopy images. It compares four segmentation architectures and includes reproducible training, image-level evaluation, mask prediction, and visual overlays.
 
