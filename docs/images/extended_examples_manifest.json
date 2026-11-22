@@ -1,0 +1,29 @@
+{
+  "selection": "first four validation filenames in sorted order",
+  "images": [
+    {
+      "image": "images/cju0qkwl35piu0993l0dewei2.jpg",
+      "mask": "masks/cju0qkwl35piu0993l0dewei2.jpg",
+      "split": "val"
+    },
+    {
+      "image": "images/cju0roawvklrq0799vmjorwfv.jpg",
+      "mask": "masks/cju0roawvklrq0799vmjorwfv.jpg",
+      "split": "val"
+    },
+    {
+      "image": "images/cju0sr5ghl0nd08789uzf1raf.jpg",
+      "mask": "masks/cju0sr5ghl0nd08789uzf1raf.jpg",
+      "split": "val"
+    },
+    {
+      "image": "images/cju0u2g7pmnux0801vkk47ivj.jpg",
+      "mask": "masks/cju0u2g7pmnux0801vkk47ivj.jpg",
+      "split": "val"
+    }
+  ],
+  "checkpoints": [
+    "runs/transformer-extended-20261115-164954/checkpoints/best.pt",
+    "runs/attention-transformer-extended-20261116-200334/checkpoints/best.pt"
+  ]
+}

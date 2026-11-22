@@ -1,10 +1,19 @@
-# Polyp Segmentation with U-Net and Transformers
+# Polyp Segmentation with Attention and Transformers
 
-## Extended-training results
+A PyTorch computer-vision project for segmenting polyp regions in colonoscopy images.
+I implemented and compared U-Net variants with attention gates and a Transformer bottleneck,
+including reproducible training, evaluation, mask prediction, and visual comparisons.
 
-Both models used identical training, validation, and test splits, with
-the same training recipe and seed (42). Checkpoints were selected using
-validation Dice. Test results below cover 150 images.
+**Attention + Transformer U-Net: 87.44% test Dice and 81.05% test IoU**
+on 150 held-out Kvasir-SEG images.
+
+**Stack:** Python | PyTorch | OpenCV | NumPy | SciPy | Matplotlib | pytest
+
+## Recorded results: extended training
+
+Both models used identical 700/150/150 train/validation/test splits, seed 42,
+256 x 256 images, batch size four, and the same extended-training recipe.
+Checkpoints were selected by validation Dice; test images were not used for gradient updates.
 
 | Test metric | Transformer U-Net | Attention + Transformer U-Net |
 |---|---:|---:|
@@ -12,146 +21,143 @@ validation Dice. Test results below cover 150 images.
 | IoU | 80.42% | 81.05% |
 | Precision | 89.24% | 91.59% |
 | Recall | 90.32% | 87.31% |
-| HD95 (pixels, lower is better) | 25.93 | 25.16 |
-| Forward time (ms/image) | 0.82 | 1.91 |
+| HD95, lower is better | 25.93 px | 25.16 px |
+| Parameters | 11.97M | 12.06M |
+| Forward time per image | 0.82 ms | 1.91 ms |
 
-The combined model achieved **87.44% Dice** and
-**81.05% IoU**, exceeding Transformer-only Dice by
-**0.21 percentage points** in this run.
-It improved precision and HD95, but had lower recall and longer inference time.
+The combined model led by **0.21 percentage points in Dice**
+and **0.63 points in IoU** in this single-seed comparison.
+It improved precision and HD95, with lower recall and longer measured forward time.
+These small gains do not establish consistent superiority across training seeds.
 
-This is a single-seed comparison, not evidence of consistent superiority
-across repeated runs. GPU nondeterminism warnings were observed during
-combined-model training. Timing measures forward passes per image in batches
-of four on an RTX 4090, excluding preprocessing.
+Timing is measured per image in batches of four on an RTX 4090, excluding preprocessing.
+HD95 is measured in resized-image pixels. Variability across test images is recorded in
+the JSON files; it is not uncertainty across repeated training runs.
 
-The combined checkpoint was selected at epoch 82; Transformer-only at epoch 73.
+![Extended test comparison](docs/images/extended_test_comparison.png)
 
-- [Transformer-only evidence](results/transformer-extended-20261115-164954/metrics.json)
-- [Combined-model evidence](results/attention-transformer-extended-20261116-200334/metrics.json)
-- [Combined training configuration](results/attention-transformer-extended-20261116-200334/config.json)
-- [Combined saved split](results/attention-transformer-extended-20261116-200334/split.csv)
+## Training behavior
 
-The original architecture comparison below is historical. Its split has
-not been verified against these extended-training runs.
+Transformer-only stopped at epoch 98 and selected epoch 73. The combined model completed
+100 epochs and selected epoch 82. Both used a maximum of 100 epochs, five warmup epochs,
+cosine decay, gradient clipping, and early-stopping patience of 25.
 
-A PyTorch computer-vision project that identifies polyp regions in colonoscopy images. It compares four segmentation architectures and includes reproducible training, image-level evaluation, mask prediction, and visual overlays.
-
-**Historical baseline result: 85.22% Dice and 77.66% IoU on 150 held-out Kvasir-SEG images**, using a Transformer U-Net trained from scratch with 11.97 million parameters.
-
-## Project highlights
-
-- Implemented U-Net, attention-gated U-Net, Transformer U-Net, and a combined architecture.
-- Integrated a Transformer bottleneck to model spatial context within convolutional features.
-- Built paired image/mask augmentation, mixed-precision training, and validation-based checkpoint selection.
-- Compared segmentation quality, boundary distance, parameter count, and inference speed.
-- Added automated tests, split checks, and safeguards against overwriting experiments.
-
-**Stack:** Python · PyTorch · OpenCV · NumPy · SciPy · Matplotlib · pytest
-
-## Recorded results
-
-These are the existing baseline results from [the saved metrics](results/summary.csv), not results from the new extended-training configuration.
-
-| Model | Dice | IoU | Recall | Parameters | ms/image* |
-|---|---:|---:|---:|---:|---:|
-| U-Net | 76.35% | 66.60% | 77.09% | 7.76M | 0.97 |
-| Attention U-Net | 82.31% | 73.89% | 83.00% | 7.85M | 1.66 |
-| **Transformer U-Net** | **85.22%** | **77.66%** | 86.47% | 11.97M | 1.66 |
-| Attention + Transformer U-Net | 84.84% | 76.84% | **86.93%** | 12.06M | 2.67 |
-
-Transformer U-Net achieved the highest Dice and IoU. Combining attention gates with the Transformer increased recall but did not improve overlap and added computation.
-
-*Forward-pass time averaged per image in batches of four on an RTX 4090 at 256×256 resolution, excluding preprocessing. This is not single-image end-to-end latency. Metrics are averages across images. Each architecture has one recorded seed (42); per-image standard deviations do not measure variability across training runs.*
-
-![Recorded test Dice comparison](docs/images/test_dice_comparison.png)
+![Training and validation curves](docs/images/extended_learning_curves.png)
 
 ## Segmentation examples
 
-![Existing qualitative comparison](docs/images/qualitative_results.png)
+These predictions come from the two selected checkpoints. The examples are the first four
+validation filenames in sorted order, chosen independently of model performance.
+They are illustrative validation examples, not additional test results.
 
-The combined architecture is labeled “Proposed” in legacy result files and figures.
+![Current checkpoint predictions](docs/images/extended_segmentation_examples.png)
 
-## Setup
+[Example selection and checkpoint paths](docs/images/extended_examples_manifest.json)
 
-Use Python 3.10 or 3.11. Install a PyTorch build suitable for your machine, then:
+## Saved evidence
+
+- [Transformer-only results](results/transformer-extended-20261115-164954/metrics.json)
+- [Combined-model results](results/attention-transformer-extended-20261116-200334/metrics.json)
+- [Combined-model configuration](results/attention-transformer-extended-20261116-200334/config.json)
+- [Combined-model training history](results/attention-transformer-extended-20261116-200334/history.csv)
+- [Shared split](results/attention-transformer-extended-20261116-200334/split.csv)
+
+## Historical experiments
+
+The original four-model experiment used a different training recipe. Its split has not
+been verified against the extended runs, so these scores must not be interpreted as a
+matched comparison against the new results. Historical files are preserved unchanged.
+
+<details>
+<summary>Original architecture comparison</summary>
+
+| Model | Historical test Dice | Historical test IoU |
+|---|---:|---:|
+| U-Net | 76.35% | 66.60% |
+| Attention U-Net | 82.31% | 73.89% |
+| Transformer U-Net | 85.22% | 77.66% |
+| Proposed | 84.84% | 76.84% |
+
+"Proposed" is the legacy name for Attention + Transformer U-Net.
+Transformer-only led on Dice and IoU in this historical experiment.
+
+[Original metrics](results/summary.csv)
+
+</details>
+
+## Setup and dataset
+
+Use Python 3.10 or 3.11 and a suitable PyTorch installation:
 
 ```bash
 python -m pip install -r requirements.txt
 python -m pytest -q tests
 ```
 
-Download Kvasir-SEG from the [official dataset website](https://datasets.simula.no/kvasir-seg/) and arrange it as:
+Obtain [Kvasir-SEG from its official website](https://datasets.simula.no/kvasir-seg/).
+Place images under `data/Kvasir-SEG/images/` and masks under `data/Kvasir-SEG/masks/`.
+Dataset files and trained checkpoints are not included in this repository.
+
+To reproduce the extended comparison, restore the exported split before training:
+
+```bash
+mkdir -p splits
+cp -n results/attention-transformer-extended-20261116-200334/split.csv splits/kvasir_seed42.csv
+```
+
+If a split already exists, verify its image assignments match the exported split.
+The combined configuration directly references the exported reference split.
+
+## Train and evaluate
+
+Run from the repository root, using a new output directory for every experiment:
+
+```bash
+python train.py --config configs/transformer_unet_extended.yaml --output runs/transformer_new
+python train.py --config configs/proposed_model_extended.yaml --output runs/combined_new
+python evaluate.py --checkpoint runs/combined_new/checkpoints/best.pt --split val
+```
+
+After selecting and freezing settings using validation data, evaluate the test split:
+
+```bash
+python evaluate.py --checkpoint runs/combined_new/checkpoints/best.pt --split test
+```
+
+Avoid repeatedly tuning against test scores. The recorded Transformer-only test result
+was already known before the combined run; this is an exploratory portfolio comparison,
+not a fully blinded final benchmark. Future improvements should use validation data,
+repeat both models across seeds, and include an untouched external evaluation dataset.
+
+## Predict
+
+```bash
+python predict.py --checkpoint runs/combined_new/checkpoints/best.pt --image path/to/image.jpg --output predictions/mask.png
+```
+
+This exports a binary mask and a red overlay at the original image dimensions.
+
+## Project structure
 
 ```text
-data/Kvasir-SEG/
-  images/
-  masks/
+configs/    Experiment settings
+datasets/   Paired loading, augmentation, and splits
+models/     U-Net, attention gates, and Transformer bottleneck
+utils/      Training, losses, metrics, checkpoints
+tests/      Model, metric, and training-safety tests
+results/    Measured results, histories, and exported splits
+docs/       Protocol and visualizations
 ```
 
-The baseline uses 700 training, 150 validation, and 150 test images. Reuse the original `splits/kvasir_seed42.csv` when comparing with existing runs. Training creates a deterministic split only if it is absent; evaluation requires an existing split. Dataset files and trained weights are not included.
+## Limitations
 
-## Train
+One dataset and one seed per configuration do not establish clinical generalization or
+reliable superiority. GPU nondeterminism warnings occurred during combined-model training.
+This project is an engineering portfolio demonstration, not a clinical diagnostic system.
 
-Run commands from the repository root. Baseline Transformer U-Net:
+## License and dataset attribution
 
-```bash
-python train.py --config configs/transformer_unet.yaml --output runs/transformer_baseline_new
-```
-
-Candidate for improving validation performance:
-
-```bash
-python train.py --config configs/transformer_unet_extended.yaml --output runs/transformer_extended_new
-```
-
-The candidate keeps the architecture, split, resolution, and batch size fixed. It allows 100 epochs, uses five warmup epochs followed by cosine decay, clips gradients, and waits 25 epochs without validation improvement before stopping. This is an experiment, not a verified accuracy improvement. The updated loss computes Dice reductions in float32 to avoid half-precision overflow.
-
-Use a new output directory for each experiment. History, checkpoints, and a copy of the split are saved there. `--data-root /path/to/Kvasir-SEG` overrides the dataset location; `--device cpu` enables CPU execution. Existing checkpoint formats remain supported.
-
-## Validate and evaluate
-
-Compare original and candidate checkpoints on validation data before selecting a configuration:
-
-```bash
-python evaluate.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --split val
-```
-
-Validation results go into the run's `validation/` directory. Once configuration selection is complete, explicitly evaluate the held-out test set:
-
-```bash
-python evaluate.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --split test
-```
-
-Test results go into `metrics.json` and `per_image_metrics.csv` in the run directory. Do not tune training settings on test scores. Keep new results separate from the baseline table until measured and verified. The batch experiment runner requires `--final-test` because it evaluates the held-out split.
-
-## Predict a mask and overlay
-
-```bash
-python predict.py --checkpoint runs/transformer_extended_new/checkpoints/best.pt --image path/to/image.jpg --output predictions/mask.png
-```
-
-This saves a binary mask at the original image dimensions and a red overlay beside it.
-
-## Project layout
-
-```text
-configs/       Baseline and candidate settings
-datasets/      Paired loading, augmentation, and splits
-models/        U-Net, attention gates, and Transformer bottleneck
-utils/         Losses, metrics, training, and checkpoint utilities
-tests/         Model, metric, and training-safety checks
-results/       Existing measured benchmark results
-docs/          Experiment protocol and example figures
-train.py       Training and validation checkpoint selection
-evaluate.py    Validation or explicit held-out evaluation
-predict.py     Single-image mask and overlay export
-```
-
-## Scope and limitations
-
-This portfolio project is not a clinical diagnostic system. Evaluation covers one dataset and one seed per baseline. External-dataset generalization and variability across seeds remain unmeasured. More training may or may not outperform the existing baseline; select new experiments using validation results.
-
-## License and dataset credit
-
-Code is available under the [MIT license](LICENSE). Kvasir-SEG is provided by its dataset creators; follow the [official terms and attribution instructions](https://datasets.simula.no/kvasir-seg/). The code license does not grant rights to redistribute the dataset.
+Code: [MIT license](LICENSE). Dataset: Kvasir-SEG, Jha et al. (2020),
+[official source and citation](https://datasets.simula.no/kvasir-seg/).
+Follow the dataset's research/education terms and attribution requirements; the code
+license does not grant dataset redistribution rights.
