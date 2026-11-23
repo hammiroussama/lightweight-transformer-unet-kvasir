@@ -1,0 +1,79 @@
+{
+  "seeds": [
+    42,
+    123,
+    3407
+  ],
+  "jobs": [
+    {
+      "model": "transformer_unet",
+      "seed": 42,
+      "config": "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed42.json",
+      "output": "runs/seed-study-20261122-190743-088986/transformer_unet-seed42"
+    },
+    {
+      "model": "proposed",
+      "seed": 42,
+      "config": "results/seed-study-20261122-190743-088986/configs/proposed-seed42.json",
+      "output": "runs/seed-study-20261122-190743-088986/proposed-seed42"
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 123,
+      "config": "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed123.json",
+      "output": "runs/seed-study-20261122-190743-088986/transformer_unet-seed123"
+    },
+    {
+      "model": "proposed",
+      "seed": 123,
+      "config": "results/seed-study-20261122-190743-088986/configs/proposed-seed123.json",
+      "output": "runs/seed-study-20261122-190743-088986/proposed-seed123"
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 3407,
+      "config": "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed3407.json",
+      "output": "runs/seed-study-20261122-190743-088986/transformer_unet-seed3407"
+    },
+    {
+      "model": "proposed",
+      "seed": 3407,
+      "config": "results/seed-study-20261122-190743-088986/configs/proposed-seed3407.json",
+      "output": "runs/seed-study-20261122-190743-088986/proposed-seed3407"
+    }
+  ],
+  "evaluation_split": "val",
+  "source_hashes": {
+    "train.py": "f92233fe850b73613942ff6a4cb25da2ac946b4ddea949bd8c6d8005c7f7f384",
+    "evaluate.py": "150e86353694277c017b40c52c7bc83d6ebd872a403eac3b395bdc9c84b4e426",
+    "/data/Amine/oussama/projects/lightweight-transformer-unet-kvasir/run_kvasir_seed_study.py": "cc764db9a2fab7a7c1edec0db01924b94e6c52ddc3d35a8c3e2973f43566e5bd",
+    "models/__init__.py": "b9d79218eaa7ef18ca38348a4ee43305e2dc04ce07e4d313bf28ac7d73ab3e72",
+    "models/attention_unet.py": "e251eae0c9937d3bbd8d0a28a0d1d951bdc60a02fc3472fbf341b980faeda281",
+    "models/blocks.py": "1968bb85f832213c464ea2ce806dc5f6fb4fd647599bd4243b9a5aded678a061",
+    "models/proposed_model.py": "6c0181dd6b6bd1a43cb23a1e9c4bfcf7546adb2b4e8507431533817f96a9061f",
+    "models/transformer_unet.py": "0eae6ac2aec0f12bdb0d976973f8265d7c4f0b476c9244b727c47a48402bb37a",
+    "models/unet.py": "5df7ac81f9c510a74aec8e2eb7a862260694fe194b1b4f0b979ff55182829c35",
+    "datasets/__init__.py": "a64646be6f5812227f532ebd4463dceea8e7e44057b31590e83f50253f185660",
+    "datasets/kvasir_dataset.py": "ff1cc69171aa28b3f241a997f1b2a01680acc4bc9dd0013a66249a563f80a2dc",
+    "utils/__init__.py": "fa65230a70f0370bcfb19b95128740f62eb30d2b8fa3ffb186cd0e33009f9fbc",
+    "utils/config.py": "8bb0282620c0e25d19ba4900968bbb2b0e9b35203ed65939bda3e00f521ee228",
+    "utils/engine.py": "aa93922a3c4015f3c5904582831de0c8f66f11a3e5e60760d2dcd30461838a7c",
+    "utils/io.py": "ea6394d977a058b6f56483e5d3f87115b04a0b38a947f5132f421659b312bb67",
+    "utils/losses.py": "258de94d07dc5966e2f00ef6b2fc7df937a7bc049575403c0069a2d551621dc9",
+    "utils/metrics.py": "7d1d9473ca636f8ba4776a62d5e6f0a7984a4bcfda4bc51f53cbaf767f30a3af",
+    "utils/seed.py": "f186c97437a18c1b31a159bcd6f3e1f340d1980f0a7c20f3c040f0d8ce546393",
+    "utils/visualization.py": "20710c403c8ec0ae99c79ee5017df3694d7d707e8a1d96718bdb87d554bcb6f7"
+  },
+  "input_hashes": {
+    "results/seed-study-20261122-190743-088986/split.csv": "1222491ff2d853abbb0535a533dea82c4f1caf6165b5590cf5ec4c8000e418f1",
+    "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed42.json": "9f91a9c0f8e3e7a403e3b62f10192dc49854f21bd88e2a7a2515003101ed1866",
+    "results/seed-study-20261122-190743-088986/configs/proposed-seed42.json": "a5a43f5153cfa4e5cf103a8b0805042a45764a2a93f364fd48c75d29a1b7a07c",
+    "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed123.json": "e5c62f1c5a88b5235d3d63709c403b68c1559b7874ed251d2a5c86539e573c7e",
+    "results/seed-study-20261122-190743-088986/configs/proposed-seed123.json": "388f5f26d68d4d496533eb4daf451a727d36c73bd9b6dc1ab76b276078375518",
+    "results/seed-study-20261122-190743-088986/configs/transformer_unet-seed3407.json": "a25c8c79797ecee78a935daa54c20f0bc61c2df0fc3dbc7b1fc861a3b4c817e5",
+    "results/seed-study-20261122-190743-088986/configs/proposed-seed3407.json": "33d9f6b6a279c717c30dbbc10c0f0cf816e29f397bdfc074cbe3418893fcf5b3"
+  },
+  "git_revision": "97fbee1d8bc8ea34c1a53a080176a6d387a66d24",
+  "policy": "All six runs reported; no best-seed selection. Validation only; no test evaluation.",
+  "determinism": "CUBLAS_WORKSPACE_CONFIG=:4096:8; strict deterministic algorithms; math attention backend"
+}

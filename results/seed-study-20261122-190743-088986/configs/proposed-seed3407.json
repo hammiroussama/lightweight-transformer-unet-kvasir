@@ -1,0 +1,36 @@
+{
+  "experiment_name": "proposed: repeated-seed validation, seed 3407",
+  "seed": 3407,
+  "output_dir": "runs/seed-study-20261122-190743-088986/proposed-seed3407",
+  "data": {
+    "root": "data/Kvasir-SEG",
+    "split_csv": "results/seed-study-20261122-190743-088986/split.csv",
+    "image_size": 256,
+    "num_workers": 4,
+    "train_ratio": 0.7,
+    "val_ratio": 0.15
+  },
+  "model": {
+    "name": "proposed",
+    "in_channels": 3,
+    "out_channels": 1,
+    "base_channels": 32,
+    "transformer_heads": 8,
+    "transformer_depth": 2,
+    "transformer_mlp_ratio": 2.0,
+    "dropout": 0.1
+  },
+  "train": {
+    "epochs": 100,
+    "batch_size": 4,
+    "learning_rate": 0.0001,
+    "min_learning_rate": 1e-06,
+    "warmup_epochs": 5,
+    "weight_decay": 0.0001,
+    "bce_weight": 0.5,
+    "dice_weight": 0.5,
+    "threshold": 0.5,
+    "grad_clip": 1.0,
+    "early_stopping_patience": 25
+  }
+}

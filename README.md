@@ -1,89 +1,71 @@
 # Polyp Segmentation with Attention and Transformers
 
-A PyTorch computer-vision project for segmenting polyp regions in colonoscopy images.
-I implemented and compared U-Net variants with attention gates and a Transformer bottleneck,
-including reproducible training, evaluation, mask prediction, and visual comparisons.
+A PyTorch project that segments polyp regions in colonoscopy images using U-Net variants,
+attention gates, and a Transformer bottleneck. Includes reproducible training, mask prediction,
+visual overlays, and a paired comparison across three training seeds.
 
-**Attention + Transformer U-Net: 87.44% test Dice and 81.05% test IoU**
-on 150 held-out Kvasir-SEG images.
+**Attention + Transformer U-Net: 88.24% mean test Dice
+and 81.87% mean test IoU across three seeds.**
 
 **Stack:** Python | PyTorch | OpenCV | NumPy | SciPy | Matplotlib | pytest
 
-## Recorded results: extended training
+## Recorded results: three-seed study
 
-Both models used identical 700/150/150 train/validation/test splits, seed 42,
-256 x 256 images, batch size four, and the same extended-training recipe.
-Checkpoints were selected by validation Dice; test images were not used for gradient updates.
+Both architectures used the same 700/150/150 train/validation/test split, seeds 42, 123,
+and 3407, and the matched extended-training recipe. Each checkpoint was selected by
+validation Dice, then all six checkpoints were evaluated on the same 150 test images.
+These are three training repetitions on one split, not three independent test datasets.
 
 | Test metric | Transformer U-Net | Attention + Transformer U-Net |
 |---|---:|---:|
-| Dice | 87.23% | 87.44% |
-| IoU | 80.42% | 81.05% |
-| Precision | 89.24% | 91.59% |
-| Recall | 90.32% | 87.31% |
-| HD95, lower is better | 25.93 px | 25.16 px |
-| Parameters | 11.97M | 12.06M |
-| Forward time per image | 0.82 ms | 1.91 ms |
+| Dice | 87.74% ± 0.59 | 88.24% ± 0.39 |
+| IoU | 81.18% ± 0.71 | 81.87% ± 0.30 |
+| Precision | 91.23% ± 0.23 | 91.77% ± 0.47 |
+| Recall | 88.32% ± 1.23 | 88.69% ± 0.52 |
+| HD95 (lower is better) | 24.30 px ± 1.04 | 23.85 px ± 1.01 |
+| Forward time per image | 1.25 ms ± 0.01 | 2.38 ms ± 0.01 |
 
-The combined model led by **0.21 percentage points in Dice**
-and **0.63 points in IoU** in this single-seed comparison.
-It improved precision and HD95, with lower recall and longer measured forward time.
-These small gains do not establish consistent superiority across training seeds.
+Values are mean ± sample standard deviation across training seeds, not confidence intervals.
+HD95 is in pixels at 256×256 resolution. Forward timing is per image in batches of four on
+an RTX 4090, excluding preprocessing; it is not end-to-end application latency.
 
-Timing is measured per image in batches of four on an RTX 4090, excluding preprocessing.
-HD95 is measured in resized-image pixels. Variability across test images is recorded in
-the JSON files; it is not uncertainty across repeated training runs.
+The combined model improved mean Dice by **0.50 percentage points** and won on
+two of three seeds. It showed lower observed seed variability, with greater inference cost.
+Three seeds do not establish statistical significance or universal superiority.
 
-![Extended test comparison](docs/images/extended_test_comparison.png)
+| Seed | Transformer Dice | Attention + Transformer Dice | Difference (points) |
+|---|---:|---:|---:|
+| 42 | 88.22% | 87.98% | -0.25 |
+| 123 | 87.08% | 88.69% | +1.61 |
+| 3407 | 87.91% | 88.06% | +0.15 |
 
-## Training behavior
+![Three-seed test comparison](docs/images/seed_study_test_comparison.png)
 
-Transformer-only stopped at epoch 98 and selected epoch 73. The combined model completed
-100 epochs and selected epoch 82. Both used a maximum of 100 epochs, five warmup epochs,
-cosine decay, gradient clipping, and early-stopping patience of 25.
+## Evidence and reproducibility
 
-![Training and validation curves](docs/images/extended_learning_curves.png)
+- [Study plan and source fingerprints](results/seed-study-20261122-190743-088986/plan.json)
+- [Frozen configurations](results/seed-study-20261122-190743-088986/configs)
+- [Shared split](results/seed-study-20261122-190743-088986/split.csv)
+- [Validation summary](results/seed-study-20261122-190743-088986/summary.json)
+- [Test summary and checkpoint hashes](results/seed-study-20261122-190743-088986/test/summary.json)
+- [Per-run test metrics and per-image scores](results/seed-study-20261122-190743-088986/test)
+- [Comparison CSV](results/seed-study-20261122-190743-088986/test/comparison.csv)
 
-## Segmentation examples
+The study used strict deterministic algorithms, the math attention backend, and
+`CUBLAS_WORKSPACE_CONFIG=:4096:8`. Historical runs used different execution settings,
+so their timings and seed-42 scores should not be treated as identical reproductions.
 
-These predictions come from the two selected checkpoints. The examples are the first four
-validation filenames in sorted order, chosen independently of model performance.
-They are illustrative validation examples, not additional test results.
+The test split had already been inspected in earlier experiments. This is an exploratory
+portfolio benchmark, not a fully blinded final evaluation. Future tuning should use
+validation data; external evaluation is needed before broader generalization claims.
+This project is not a clinically validated diagnostic system.
 
-![Current checkpoint predictions](docs/images/extended_segmentation_examples.png)
+## Earlier experiments and qualitative examples
 
-[Example selection and checkpoint paths](docs/images/extended_examples_manifest.json)
-
-## Saved evidence
-
-- [Transformer-only results](results/transformer-extended-20261115-164954/metrics.json)
-- [Combined-model results](results/attention-transformer-extended-20261116-200334/metrics.json)
-- [Combined-model configuration](results/attention-transformer-extended-20261116-200334/config.json)
-- [Combined-model training history](results/attention-transformer-extended-20261116-200334/history.csv)
-- [Shared split](results/attention-transformer-extended-20261116-200334/split.csv)
-
-## Historical experiments
-
-The original four-model experiment used a different training recipe. Its split has not
-been verified against the extended runs, so these scores must not be interpreted as a
-matched comparison against the new results. Historical files are preserved unchanged.
-
-<details>
-<summary>Original architecture comparison</summary>
-
-| Model | Historical test Dice | Historical test IoU |
-|---|---:|---:|
-| U-Net | 76.35% | 66.60% |
-| Attention U-Net | 82.31% | 73.89% |
-| Transformer U-Net | 85.22% | 77.66% |
-| Proposed | 84.84% | 76.84% |
-
-"Proposed" is the legacy name for Attention + Transformer U-Net.
-Transformer-only led on Dice and IoU in this historical experiment.
-
-[Original metrics](results/summary.csv)
-
-</details>
+[Previous results, learning curves, and segmentation examples](README_previous_results.md)
+are preserved as historical evidence. Those images were generated from the earlier
+single-seed checkpoints, not the checkpoints in the new study. The four-model historical
+comparison is not a controlled comparison against this study.
 
 ## Setup and dataset
 
@@ -127,7 +109,7 @@ python evaluate.py --checkpoint runs/combined_new/checkpoints/best.pt --split te
 Avoid repeatedly tuning against test scores. The recorded Transformer-only test result
 was already known before the combined run; this is an exploratory portfolio comparison,
 not a fully blinded final benchmark. Future improvements should use validation data,
-repeat both models across seeds, and include an untouched external evaluation dataset.
+include an untouched external evaluation dataset. The three-seed study above now measures variation across training seeds.
 
 ## Predict
 

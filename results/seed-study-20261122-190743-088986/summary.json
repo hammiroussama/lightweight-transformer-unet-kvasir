@@ -1,0 +1,67 @@
+{
+  "split": "validation",
+  "completed_runs": 6,
+  "planned_runs": 6,
+  "runs": [
+    {
+      "model": "transformer_unet",
+      "seed": 42,
+      "dice": 0.8891827778021495,
+      "iou": 0.8236957317590714
+    },
+    {
+      "model": "proposed",
+      "seed": 42,
+      "dice": 0.8882535778482755,
+      "iou": 0.8225759477913379
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 123,
+      "dice": 0.8795790781080722,
+      "iou": 0.8136171956111987
+    },
+    {
+      "model": "proposed",
+      "seed": 123,
+      "dice": 0.8866826602816582,
+      "iou": 0.8217057380576929
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 3407,
+      "dice": 0.8829094762603442,
+      "iou": 0.8148646740615368
+    },
+    {
+      "model": "proposed",
+      "seed": 3407,
+      "dice": 0.8851878354946773,
+      "iou": 0.8197962586085001
+    }
+  ],
+  "transformer_unet": {
+    "n": 3,
+    "dice_mean": 0.8838904440568554,
+    "dice_seed_std": 0.004876421363751168
+  },
+  "proposed": {
+    "n": 3,
+    "dice_mean": 0.886708024541537,
+    "dice_seed_std": 0.0015330285561335525
+  },
+  "paired_differences": [
+    {
+      "seed": 42,
+      "combined_minus_transformer_dice_points": -0.09291999538739715
+    },
+    {
+      "seed": 123,
+      "combined_minus_transformer_dice_points": 0.7103582173585976
+    },
+    {
+      "seed": 3407,
+      "combined_minus_transformer_dice_points": 0.22783592343330605
+    }
+  ]
+}

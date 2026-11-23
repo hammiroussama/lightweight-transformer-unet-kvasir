@@ -1,0 +1,60 @@
+{
+  "split": "test",
+  "completed_runs": 6,
+  "runs": [
+    {
+      "model": "transformer_unet",
+      "seed": 42,
+      "dice": 0.8822484235465526,
+      "iou": 0.8176698129375776,
+      "checkpoint_sha256": "b0de08524385d04415430a705f38e0c5d8ec6b3bbc0c78b5c29edbf6e94e7c26"
+    },
+    {
+      "model": "proposed",
+      "seed": 42,
+      "dice": 0.8797725178550407,
+      "iou": 0.8159236158182943,
+      "checkpoint_sha256": "607625d4a9f11fccd70e4b5f3f868382d512e53cf210e47f01f961eff81157ef"
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 123,
+      "dice": 0.8707834458669337,
+      "iou": 0.8038220767878617,
+      "checkpoint_sha256": "0d52c3f6442ef5ad216b1005c4d384c43820029d35151d6c9737bcd452ebaf52"
+    },
+    {
+      "model": "proposed",
+      "seed": 123,
+      "dice": 0.8868757526824872,
+      "iou": 0.8219537200033664,
+      "checkpoint_sha256": "88eb5d69ffaaa065b7406dc263106c092b6121b4db51d926ce3733dd46e08da5"
+    },
+    {
+      "model": "transformer_unet",
+      "seed": 3407,
+      "dice": 0.8790926851394276,
+      "iou": 0.8137720475206152,
+      "checkpoint_sha256": "ca7a5b290d52b9bfef971b2f751bd4f2ff801ac9b023cecfae343a927d7f87ab"
+    },
+    {
+      "model": "proposed",
+      "seed": 3407,
+      "dice": 0.8805976252257824,
+      "iou": 0.8181656070860723,
+      "checkpoint_sha256": "fabab1af1a16cbc57fe73c6713a3eb2152ba3194a60d4acbfbb88664efb47013"
+    }
+  ],
+  "transformer_unet": {
+    "dice_mean": 0.8773748515176379,
+    "dice_seed_std": 0.005922384871202936,
+    "iou_mean": 0.8117546457486848,
+    "iou_seed_std": 0.007140895010436577
+  },
+  "proposed": {
+    "dice_mean": 0.8824152985877701,
+    "dice_seed_std": 0.0038848344355482873,
+    "iou_mean": 0.8186809809692444,
+    "iou_seed_std": 0.003047908594478825
+  }
+}
