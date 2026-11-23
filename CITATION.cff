@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please credit this repository."
-title: "Polyp Segmentation with U-Net and Transformers"
+title: "Attention + Transformer U-Net for Polyp Segmentation"
 type: software
 authors:
   - family-names: "Hammir"
